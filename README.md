@@ -85,4 +85,4 @@
 
 ## ✦ License
 
-Private / All rights reserved © STYCH Atelier. Built for the bold.
+Private / All rights reserved © STYCH. Built for the bold.
