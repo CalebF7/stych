@@ -1,0 +1,399 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Syne:wght@500;600;700;800&display=swap');
+
+/* ==========================================================================
+   STYCH LUXURY DESIGN SYSTEM - CSS VARIABLES & DESIGN TOKENS
+   ========================================================================== */
+:root {
+  /* Color Palette - Obsidian Dark Flagship */
+  --bg-black: #080808;
+  --bg-elevated-1: #111112;
+  --bg-elevated-2: #18181A;
+  --bg-elevated-3: #222225;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-active: rgba(255, 255, 255, 0.4);
+
+  /* Studio Chalk Light (For clean studio showcase) */
+  --studio-bg: #F6F6F4;
+  --studio-card-bg: #EAEAE8;
+  --studio-white: #FFFFFF;
+  --studio-border: rgba(0, 0, 0, 0.08);
+  --studio-text: #0A0A0A;
+  --studio-muted: #6B7280;
+
+  /* Typography Colors */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --text-dim: #52525B;
+
+  /* Accents */
+  --accent-gold: #C5A880;
+  --accent-mint: #7BE495;
+  --accent-red: #EF4444;
+  --accent-green: #10B981;
+
+  /* Typography Tokens */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Container & Grid Dimensions */
+  --max-width: 1360px;
+  --header-height: 76px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+  --radius-arch: 140px 140px 24px 24px;
+
+  /* Transitions */
+  --ease-out-luxury: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.2s var(--ease-out-luxury);
+  --transition-normal: 0.35s var(--ease-out-luxury);
+  --transition-slow: 0.6s var(--ease-out-luxury);
+}
+
+/* ==========================================================================
+   GLOBAL RESETS & FOUNDATION
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* Remove blue highlight on tap/click globally */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  outline: none;
+}
+
+/* Restore accessible focus ring only for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid rgba(197, 168, 128, 0.6);
+  outline-offset: 2px;
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-black);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--bg-black);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Custom Luxury Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-black);
+}
+::-webkit-scrollbar-thumb {
+  background: #27272A;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3F3F46;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 0.85s linear infinite;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   HIGH-FASHION TYPOGRAPHY UTILITIES
+   ========================================================================== */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.tracking-tight-display {
+  letter-spacing: -0.035em;
+}
+
+.tracking-widest-spec {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   GLASSMORPHISM & FROSTED CONTAINERS
+   ========================================================================== */
+.glass-nav {
+  background: rgba(14, 14, 16, 0.78);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(22, 22, 26, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-card:hover {
+  border-color: var(--border-strong);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+}
+
+/* ==========================================================================
+   BUTTON STYLES (MAGNETIC / LUXURY)
+   ========================================================================== */
+.btn-primary {
+  background: #FFFFFF;
+  color: #000000;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+  padding: 14px 28px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  background: #F0F0F0;
+  box-shadow: 0 10px 28px rgba(255, 255, 255, 0.25);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+  padding: 14px 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-dark-studio {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 16px 36px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all var(--transition-fast);
+}
+
+.btn-dark-studio:hover {
+  background: #27272A;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   ANIMATIONS & KEYFRAMES
+   ========================================================================== */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 48s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.96); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+/* Grid & Section Layout Helpers */
+.stych-container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* Responsive Studio Product Grid */
+.stych-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 32px 20px;
+}
+
+@media (max-width: 1024px) {
+  .stych-product-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px 16px;
+  }
+}
+
+/* ================================================================
+   MOBILE OVERHAUL — max-width: 768px
+   ================================================================ */
+@media (max-width: 768px) {
+  /* Container */
+  .stych-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* 2-Column Studio Product Grid */
+  .stych-product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px 10px !important;
+  }
+
+  /* Product Card — tighter, touch-friendly */
+  .stych-product-card {
+    cursor: pointer;
+  }
+
+  /* Make desktop quick-overlay (hover) invisible on mobile */
+  .desktop-quick-overlay {
+    display: none !important;
+  }
+
+  /* Section headings scale naturally */
+  .section-heading {
+    font-size: clamp(1.4rem, 5vw, 2rem) !important;
+  }
+
+  /* Loosen negative letter spacing and enforce proper line height on mobile */
+  .tracking-tight-display {
+    letter-spacing: -0.01em !important;
+    line-height: 1.2 !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Admin Order Card mobile responsiveness */
+  .admin-order-actions {
+    text-align: left !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  }
+
+  /* Section padding — tighten side margins */
+  section {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Buttons — full width on tight screens */
+  .btn-mobile-full {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* ================================================================
+   MOBILE SMALL — max-width: 390px (iPhone 14 / Pixel 7)
+   ================================================================ */
+@media (max-width: 390px) {
+  .stych-product-grid {
+    gap: 10px 8px !important;
+  }
+  .stych-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
