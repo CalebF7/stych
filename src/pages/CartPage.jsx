@@ -13,7 +13,7 @@ import { supabase } from '../lib/supabase';
 
 export default function CartPage({ setCurrentView }) {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartSubtotal } = useCart();
-  const { storeConfig } = useProducts();
+  const { storeConfig, products } = useProducts();
 
   const [customer, setCustomer] = useState({
     fullName: '',
@@ -636,7 +636,12 @@ export default function CartPage({ setCurrentView }) {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateQuantity(item.id, item.selectedSize, Math.min(item.stockQuantity ?? 0, item.quantity + 1))}
+                              onClick={() => {
+                                const matchingProduct = products?.find((p) => p.id === item.id);
+                                const availableStock = matchingProduct?.stockQuantity ?? item.stockQuantity ?? 99;
+                                const maxStock = availableStock > 0 ? availableStock : 99;
+                                updateQuantity(item.id, item.selectedSize, Math.min(maxStock, item.quantity + 1));
+                              }}
                               style={{ width: '28px', height: '28px', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             >
                               <Plus size={13} />

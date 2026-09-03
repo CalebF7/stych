@@ -269,7 +269,7 @@ export default function ProductModal({ product, onClose }) {
               <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '2px' }}>
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ width: '40px', height: '40px', color: '#FFFFFF', fontSize: '1.2rem', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>−</button>
                 <span style={{ width: '32px', textAlign: 'center', fontWeight: 800, fontSize: '1rem' }}>{quantity}</span>
-                <button onClick={() => setQuantity(Math.min(product.stockQuantity ?? 0, quantity + 1))} style={{ width: '40px', height: '40px', color: '#FFFFFF', fontSize: '1.2rem', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>+</button>
+                <button onClick={() => setQuantity(Math.min((product.stockQuantity ?? 0) > 0 ? product.stockQuantity : 99, quantity + 1))} style={{ width: '40px', height: '40px', color: '#FFFFFF', fontSize: '1.2rem', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>+</button>
               </div>
             </div>
             {product.inStock && (product.stockQuantity ?? 0) > 0 && (
@@ -336,8 +336,8 @@ export default function ProductModal({ product, onClose }) {
 
 /* ── Shared info panel used by desktop modal ── */
 function ModalInfoPanel({ product, selectedSize, setSelectedSize, quantity, setQuantity, addedSuccess, handleAdd, availableSizes }) {
-  const stockQty = product.stockQuantity ?? 0;
-  const isAvailable = product.inStock && stockQty > 0;
+  const stockQty = (product.stockQuantity ?? 0) > 0 ? product.stockQuantity : (product.inStock ? 99 : 0);
+  const isAvailable = product.inStock && ((product.stockQuantity ?? 0) > 0 || product.inStock);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -390,7 +390,7 @@ function ModalInfoPanel({ product, selectedSize, setSelectedSize, quantity, setQ
           <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '4px' }}>
             <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ width: '38px', height: '38px', color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>−</button>
             <span style={{ width: '32px', textAlign: 'center', fontWeight: 700, fontSize: '0.95rem' }}>{quantity}</span>
-            <button onClick={() => setQuantity(Math.min(stockQty, quantity + 1))} style={{ width: '38px', height: '38px', color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>+</button>
+            <button onClick={() => setQuantity(Math.min(stockQty > 0 ? stockQty : 99, quantity + 1))} style={{ width: '38px', height: '38px', color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>+</button>
           </div>
 
           <button onClick={handleAdd} disabled={!isAvailable}

@@ -57,7 +57,9 @@ export function CartProvider({ children }) {
             quantity,
             images: product.images,
             slug: product.slug,
-            category: product.category
+            category: product.category,
+            stockQuantity: product.stockQuantity ?? (product.inStock ? 15 : 99),
+            inStock: product.inStock
           }
         ];
       }
