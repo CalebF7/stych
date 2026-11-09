@@ -1,0 +1,27 @@
+{
+  "name": "STYCH — Luxury Streetwear Atelier",
+  "short_name": "STYCH",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "orientation": "portrait",
+  "description": "Independent luxury streetwear brand. Heavyweight cuts and owner portal.",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/stych-monogram-white.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
+

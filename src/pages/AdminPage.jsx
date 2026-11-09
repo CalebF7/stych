@@ -5,12 +5,20 @@ import {
   RefreshCw, Phone, Sparkles, Image, Tag, ArrowLeft, Save,
   AlertCircle, Mail, MessageSquare, ExternalLink, Loader, User,
   KeyRound, CheckCircle2, PackageCheck, Copy, Clock, Filter,
-  Eye, ChevronDown, ChevronUp, Search, Calendar, MapPin
+  Eye, ChevronDown, ChevronUp, Search, Calendar, MapPin,
+  Fingerprint, ScanFace, Smartphone
 } from 'lucide-react';
 import { useProducts } from '../context/ProductContext';
 import { formatCurrency } from '../data/config';
 import { CATEGORIES } from '../data/initialProducts';
 import { supabase } from '../lib/supabase';
+import {
+  isBiometricsSupported,
+  getSavedBiometricInfo,
+  registerBiometrics,
+  verifyBiometrics,
+  removeBiometrics
+} from '../lib/webauthn';
 
 // ─── Shared Input Style ──────────────────────────────────────
 const inputStyle = {
@@ -460,6 +468,12 @@ export default function AdminPage({ setCurrentView }) {
   const [authSuccessMessage, setAuthSuccessMessage] = useState('');
   const [resendingEmail, setResendingEmail] = useState(false);
 
+  // Biometrics (Face ID & Fingerprint) State
+  const [biometricsAvailable, setBiometricsAvailable] = useState(false);
+  const [savedBiometrics, setSavedBiometrics] = useState(null);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricMsg, setBiometricMsg] = useState({ text: '', type: '' });
+
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'orders' | 'add' | 'inquiries' | 'subscribers' | 'settings'
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -584,6 +598,24 @@ export default function AdminPage({ setCurrentView }) {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Initialize WebAuthn platform biometrics (Face ID / Fingerprint)
+  useEffect(() => {
+    async function initBiometrics() {
+      try {
+        const available = await isBiometricsSupported();
+        setBiometricsAvailable(available);
+        const saved = getSavedBiometricInfo();
+        setSavedBiometrics(saved);
+        if (saved && saved.email) {
+          setAuthEmail(saved.email);
+        }
+      } catch (err) {
+        console.warn('Biometric detection error:', err);
+      }
+    }
+    initBiometrics();
   }, []);
 
   // Fetch initial collections when authenticated
@@ -750,6 +782,70 @@ export default function AdminPage({ setCurrentView }) {
     } finally {
       setResendingEmail(false);
     }
+  };
+
+  // ── Biometric Authentication Handlers ───────────────────────
+  const handleBiometricLogin = async () => {
+    setAuthError('');
+    setAuthSuccessMessage('');
+    setBiometricLoading(true);
+
+    try {
+      const result = await verifyBiometrics();
+      if (result && result.success) {
+        sessionStorage.setItem('stych_admin_tab_authenticated', 'true');
+        setIsAuthenticated(true);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          setCurrentUser(session.user);
+        } else {
+          setCurrentUser({
+            email: result.email || 'admin@stych.store',
+            user_metadata: { full_name: 'Store Administrator' }
+          });
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        setAuthError(err.message || 'Biometric authentication was not completed.');
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  const handleRegisterBiometrics = async () => {
+    setBiometricMsg({ text: '', type: '' });
+    setBiometricLoading(true);
+
+    try {
+      const targetEmail = currentUser?.email || authEmail.trim() || 'admin@stych.store';
+      const record = await registerBiometrics(targetEmail);
+      setSavedBiometrics(record);
+      setBiometricMsg({
+        text: `Device biometric sensor paired successfully! Fast unlock is now active.`,
+        type: 'success'
+      });
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        setBiometricMsg({
+          text: err.message || 'Could not complete biometric setup.',
+          type: 'error'
+        });
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  const handleRemoveBiometrics = () => {
+    removeBiometrics();
+    setSavedBiometrics(null);
+    setBiometricMsg({
+      text: 'Biometric authorization unlinked from this device.',
+      type: 'success'
+    });
   };
 
   const handleSignOut = async () => {
@@ -981,7 +1077,73 @@ export default function AdminPage({ setCurrentView }) {
             </div>
           ) : (
             /* ── Sign In / Register Form ── */
-            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
+            <>
+              {authMode === 'signin' && savedBiometrics && (
+                <div style={{ marginBottom: '18px' }}>
+                  <button
+                    type="button"
+                    onClick={handleBiometricLogin}
+                    disabled={biometricLoading}
+                    style={{
+                      width: '100%',
+                      padding: '13px 18px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(197, 168, 128, 0.22) 0%, rgba(197, 168, 128, 0.08) 100%)',
+                      border: '1px solid rgba(197, 168, 128, 0.45)',
+                      color: '#C5A880',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      letterSpacing: '0.03em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      cursor: biometricLoading ? 'wait' : 'pointer',
+                      boxShadow: '0 8px 24px rgba(197, 168, 128, 0.12)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {biometricLoading ? (
+                      <div style={{
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        border: '2px solid rgba(197,168,128,0.3)', borderTopColor: '#C5A880',
+                        animation: 'spin 0.85s linear infinite'
+                      }} />
+                    ) : (
+                      <Fingerprint size={19} color="#C5A880" />
+                    )}
+                    <span>{biometricLoading ? 'Verifying Sensor...' : `Unlock with ${savedBiometrics.platform || 'Face ID / Fingerprint'}`}</span>
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', marginBottom: '8px' }}>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+                    <span style={{ fontSize: '0.72rem', color: '#71717A', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                      or continue with password
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+                  </div>
+                </div>
+              )}
+
+              {authMode === 'signin' && !savedBiometrics && biometricsAvailable && (
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(197, 168, 128, 0.06)',
+                  border: '1px dashed rgba(197, 168, 128, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '16px'
+                }}>
+                  <Fingerprint size={16} color="#C5A880" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.76rem', color: '#D4D4D8', lineHeight: 1.4, textAlign: 'left' }}>
+                    Face ID & Fingerprint ready on this device. Sign in once with password to link.
+                  </span>
+                </div>
+              )}
+
+              <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
               {authMode === 'register' && (
                 <div>
                   <label style={labelStyle}>Full Name *</label>
@@ -1101,6 +1263,7 @@ export default function AdminPage({ setCurrentView }) {
                 )}
               </button>
             </form>
+          </>
           )}
         </div>
 
@@ -2136,6 +2299,128 @@ export default function AdminPage({ setCurrentView }) {
                   {passwordUpdateMsg.text && (
                     <p style={{ fontSize: '0.78rem', marginTop: '8px', fontWeight: 600, color: passwordUpdateMsg.type === 'success' ? '#10B981' : '#EF4444' }}>
                       {passwordUpdateMsg.text}
+                    </p>
+                  )}
+                </div>
+
+                {/* ── Biometric Fast Unlock (Face ID / Touch ID / Fingerprint) ── */}
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px', marginTop: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Fingerprint size={16} color="#C5A880" />
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>Device Biometrics (Face ID & Fingerprint)</label>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#A1A1AA', marginBottom: '12px', lineHeight: 1.5 }}>
+                    Pair this phone or computer's native biometric sensor to bypass password prompts on future visits.
+                  </p>
+
+                  {savedBiometrics ? (
+                    <div style={{
+                      padding: '14px 16px',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      borderRadius: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#10B981', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                            <CheckCircle2 size={15} />
+                            <span>Linked ({savedBiometrics.platform || 'Platform Sensor'})</span>
+                          </p>
+                          <p style={{ fontSize: '0.74rem', color: '#A1A1AA', marginTop: '4px', margin: 0 }}>
+                            Admin: <strong style={{ color: '#FFFFFF' }}>{savedBiometrics.email}</strong>
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={handleBiometricLogin}
+                            disabled={biometricLoading}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              background: 'rgba(197, 168, 128, 0.15)',
+                              border: '1px solid rgba(197, 168, 128, 0.35)',
+                              color: '#C5A880',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: biometricLoading ? 'wait' : 'pointer'
+                            }}
+                          >
+                            Test Sensor
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveBiometrics}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.25)',
+                              color: '#EF4444',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Unlink Device
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '14px 16px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '12px'
+                    }}>
+                      <div>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#FFFFFF', margin: 0 }}>
+                          No biometric device linked
+                        </p>
+                        <p style={{ fontSize: '0.74rem', color: '#71717A', marginTop: '2px', margin: 0 }}>
+                          {biometricsAvailable ? 'Sensor available on this device.' : 'Supported in HTTPS/PWA mode.'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRegisterBiometrics}
+                        disabled={biometricLoading}
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, rgba(197, 168, 128, 0.25) 0%, rgba(197, 168, 128, 0.1) 100%)',
+                          border: '1px solid rgba(197, 168, 128, 0.4)',
+                          color: '#C5A880',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: biometricLoading ? 'wait' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Fingerprint size={16} />
+                        <span>{biometricLoading ? 'Configuring Sensor...' : 'Enable Face ID / Fingerprint'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {biometricMsg.text && (
+                    <p style={{
+                      fontSize: '0.78rem',
+                      marginTop: '8px',
+                      fontWeight: 600,
+                      color: biometricMsg.type === 'success' ? '#10B981' : '#EF4444'
+                    }}>
+                      {biometricMsg.text}
                     </p>
                   )}
                 </div>
