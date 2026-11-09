@@ -1,13 +1,13 @@
 {
-  "name": "STYCH — Luxury Streetwear Atelier",
-  "short_name": "STYCH",
-  "start_url": "/",
-  "id": "/",
+  "name": "STYCH — Owner Atelier Portal",
+  "short_name": "STYCH Admin",
+  "start_url": "/#/admin",
+  "id": "/#/admin",
   "display": "standalone",
   "background_color": "#080808",
   "theme_color": "#080808",
   "orientation": "portrait",
-  "description": "Independent luxury streetwear brand. Heavyweight cuts and owner portal.",
+  "description": "STYCH luxury brand atelier, inventory management, and owner portal.",
   "scope": "/",
   "icons": [
     {

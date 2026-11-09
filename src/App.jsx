@@ -14,9 +14,19 @@ import FAQPage from './pages/FAQPage';
 import AdminPage from './pages/AdminPage';
 function AppContent() {
   const [currentView, setCurrentView] = useState(() => {
+    const isStandalone = typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    );
     const hash = window.location.hash.replace(/^#\/?/, '');
     const cleanHash = hash.split('?')[0];
     const baseView = cleanHash.split('/')[0];
+
+    // If launched from home screen standalone PWA without explicit customer view, default to admin
+    if (isStandalone && (!baseView || baseView === 'home')) {
+      return 'admin';
+    }
+
     const validViews = ['home', 'store', 'story', 'faq', 'cart', 'admin'];
     return validViews.includes(baseView) ? baseView : 'home';
   });
@@ -41,7 +51,12 @@ function AppContent() {
           setActiveModalProduct(null);
         }
       } else if (!window.location.hash) {
-        window.location.hash = '#/home';
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+          window.location.hash = '#/admin';
+        } else {
+          window.location.hash = '#/home';
+        }
       }
     };
 
@@ -50,12 +65,15 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [activeModalProduct]);
 
-  // Sync state changes to browser URL hash
+  // Sync state changes to browser URL hash & remember admin PWA target
   useEffect(() => {
     const currentHash = window.location.hash.replace(/^#\/?/, '');
     const currentBaseView = currentHash.split('?')[0].split('/')[0];
     if (currentBaseView !== currentView) {
       window.location.hash = `#/${currentView}`;
+    }
+    if (currentView === 'admin') {
+      try { localStorage.setItem('stych_pwa_target', 'admin'); } catch (e) { }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);

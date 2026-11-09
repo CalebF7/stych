@@ -613,9 +613,6 @@ export default function AdminPage({ setCurrentView }) {
         }
         const saved = getSavedBiometricInfo();
         setSavedBiometrics(saved);
-        if (saved && saved.email) {
-          setAuthEmail(saved.email);
-        }
       } catch (err) {
         console.warn('Biometric detection error:', err);
       }
@@ -769,6 +766,8 @@ export default function AdminPage({ setCurrentView }) {
       setAuthError(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setAuthLoading(false);
+      setAuthPassword('');
+      setAuthConfirmPassword('');
     }
   };
 
@@ -893,6 +892,8 @@ export default function AdminPage({ setCurrentView }) {
       setAuthError(err.message || 'Sign in failed. Please check your credentials.');
     } finally {
       setAuthLoading(false);
+      setAuthPassword('');
+      setAuthConfirmPassword('');
     }
   };
 
@@ -913,6 +914,12 @@ export default function AdminPage({ setCurrentView }) {
       setIsAuthenticated(false);
       setCurrentUser(null);
       setLockConfirm(false);
+      setAuthEmail('');
+      setAuthPassword('');
+      setAuthConfirmPassword('');
+      setAuthName('');
+      setAuthError('');
+      setAuthSuccessMessage('');
     } catch (err) {
       console.error('Sign out error:', err);
     } finally {
@@ -1058,7 +1065,14 @@ export default function AdminPage({ setCurrentView }) {
             <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '9999px', marginBottom: '22px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
               <button
                 type="button"
-                onClick={() => { setAuthMode('signin'); setAuthError(''); setAuthSuccessMessage(''); }}
+                onClick={() => {
+                  setAuthMode('signin');
+                  setAuthError('');
+                  setAuthSuccessMessage('');
+                  setAuthPassword('');
+                  setAuthConfirmPassword('');
+                  setAuthEmail('');
+                }}
                 style={{
                   flex: 1, padding: '8px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 700,
                   background: authMode === 'signin' ? '#FFFFFF' : 'transparent',
@@ -1070,7 +1084,15 @@ export default function AdminPage({ setCurrentView }) {
               </button>
               <button
                 type="button"
-                onClick={() => { setAuthMode('register'); setAuthError(''); setAuthSuccessMessage(''); }}
+                onClick={() => {
+                  setAuthMode('register');
+                  setAuthError('');
+                  setAuthSuccessMessage('');
+                  setAuthPassword('');
+                  setAuthConfirmPassword('');
+                  setAuthEmail('');
+                  setAuthName('');
+                }}
                 style={{
                   flex: 1, padding: '8px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 700,
                   background: authMode === 'register' ? '#C5A880' : 'transparent',
@@ -1113,7 +1135,14 @@ export default function AdminPage({ setCurrentView }) {
 
               <button
                 type="button"
-                onClick={() => { setAuthMode('signin'); setAuthError(''); setAuthSuccessMessage(''); }}
+                onClick={() => {
+                  setAuthMode('signin');
+                  setAuthError('');
+                  setAuthSuccessMessage('');
+                  setAuthPassword('');
+                  setAuthConfirmPassword('');
+                  setAuthEmail('');
+                }}
                 className="btn-primary"
                 style={{ padding: '14px', width: '100%', fontSize: '0.92rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
               >
@@ -1234,7 +1263,7 @@ export default function AdminPage({ setCurrentView }) {
                 </div>
               )}
 
-              <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
+              <form onSubmit={handleAuthSubmit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
               {authMode === 'register' && (
                 <div>
                   <label style={labelStyle}>Full Name *</label>
@@ -1242,6 +1271,7 @@ export default function AdminPage({ setCurrentView }) {
                     <User size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                     <input
                       type="text" required placeholder="e.g. STYCH Atelier"
+                      autoComplete="off"
                       value={authName} onChange={e => setAuthName(e.target.value)}
                       style={{ ...inputStyle, paddingLeft: '40px' }}
                     />
@@ -1255,6 +1285,7 @@ export default function AdminPage({ setCurrentView }) {
                   <Mail size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
                     type="email" required placeholder="admin@stych.store"
+                    autoComplete="off"
                     value={authEmail} onChange={e => setAuthEmail(e.target.value)}
                     style={{ ...inputStyle, paddingLeft: '40px' }}
                   />
@@ -1267,6 +1298,7 @@ export default function AdminPage({ setCurrentView }) {
                   <KeyRound size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
                     type="password" required placeholder="••••••••"
+                    autoComplete={authMode === 'register' ? 'new-password' : 'off'}
                     value={authPassword} onChange={e => setAuthPassword(e.target.value)}
                     style={{ ...inputStyle, paddingLeft: '40px' }}
                   />
@@ -1280,6 +1312,7 @@ export default function AdminPage({ setCurrentView }) {
                     <KeyRound size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                     <input
                       type="password" required placeholder="••••••••"
+                      autoComplete="new-password"
                       value={authConfirmPassword} onChange={e => setAuthConfirmPassword(e.target.value)}
                       style={{ ...inputStyle, paddingLeft: '40px' }}
                     />
