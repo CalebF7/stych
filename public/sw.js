@@ -1,10 +1,10 @@
-const CACHE_NAME = 'stych-pwa-v1';
+const CACHE_NAME = 'stych-pwa-v2';
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg',
-  '/assets/stych-monogram-white.jpg'
+  '/pwa-icon.jpg',
+  '/assets/stych-pwa-logo.jpg'
 ];
 
 self.addEventListener('install', (event) => {

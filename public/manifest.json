@@ -11,17 +11,16 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/pwa-icon.jpg",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/stych-monogram-white.jpg",
+      "src": "/assets/stych-pwa-logo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "any"
     }
   ]
 }
-
