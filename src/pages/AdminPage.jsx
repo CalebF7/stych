@@ -470,9 +470,11 @@ export default function AdminPage({ setCurrentView }) {
 
   // Biometrics (Face ID & Fingerprint) State
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
+  const [biometricsReason, setBiometricsReason] = useState('');
   const [savedBiometrics, setSavedBiometrics] = useState(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [biometricMsg, setBiometricMsg] = useState({ text: '', type: '' });
+  const [showBioPrompt, setShowBioPrompt] = useState(false);
 
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'orders' | 'add' | 'inquiries' | 'subscribers' | 'settings'
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -604,8 +606,11 @@ export default function AdminPage({ setCurrentView }) {
   useEffect(() => {
     async function initBiometrics() {
       try {
-        const available = await isBiometricsSupported();
-        setBiometricsAvailable(available);
+        const check = await isBiometricsSupported();
+        setBiometricsAvailable(check.supported);
+        if (!check.supported && check.reason) {
+          setBiometricsReason(check.reason);
+        }
         const saved = getSavedBiometricInfo();
         setSavedBiometrics(saved);
         if (saved && saved.email) {
@@ -729,6 +734,10 @@ export default function AdminPage({ setCurrentView }) {
         if (data.session) {
           setIsAuthenticated(true);
           setCurrentUser(data.user);
+          const saved = getSavedBiometricInfo();
+          if (!saved && biometricsAvailable) {
+            setShowBioPrompt(true);
+          }
         }
       } else if (authMode === 'register') {
         if (authPassword !== authConfirmPassword) {
@@ -807,7 +816,10 @@ export default function AdminPage({ setCurrentView }) {
         }
       }
     } catch (err) {
-      if (err.name !== 'NotAllowedError') {
+      console.warn('Biometric login notice:', err);
+      if (err.name === 'NotAllowedError') {
+        setAuthError('Face ID prompt was cancelled or timed out. Please try again or use your password.');
+      } else {
         setAuthError(err.message || 'Biometric authentication was not completed.');
       }
     } finally {
@@ -827,8 +839,15 @@ export default function AdminPage({ setCurrentView }) {
         text: `Device biometric sensor paired successfully! Fast unlock is now active.`,
         type: 'success'
       });
+      setShowBioPrompt(false);
     } catch (err) {
-      if (err.name !== 'NotAllowedError') {
+      console.warn('Biometric setup error:', err);
+      if (err.name === 'NotAllowedError') {
+        setBiometricMsg({
+          text: 'Biometric authorization was cancelled.',
+          type: 'error'
+        });
+      } else {
         setBiometricMsg({
           text: err.message || 'Could not complete biometric setup.',
           type: 'error'
@@ -836,6 +855,44 @@ export default function AdminPage({ setCurrentView }) {
       }
     } finally {
       setBiometricLoading(false);
+    }
+  };
+
+  const handleSignInWithBiometricLink = async (e) => {
+    if (e) e.preventDefault();
+    if (!authEmail.trim() || !authPassword) {
+      setAuthError('Please fill in your admin email and password below, then click to pair Face ID.');
+      return;
+    }
+
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: authEmail.trim(),
+        password: authPassword
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        sessionStorage.setItem('stych_admin_tab_authenticated', 'true');
+        setIsAuthenticated(true);
+        setCurrentUser(data.user);
+
+        // Immediate prompt for hardware biometric pairing
+        try {
+          const record = await registerBiometrics(data.user.email);
+          setSavedBiometrics(record);
+        } catch (bioErr) {
+          console.warn('Sensor pairing cancelled or deferred:', bioErr);
+        }
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Sign in failed. Please check your credentials.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -1126,19 +1183,53 @@ export default function AdminPage({ setCurrentView }) {
               )}
 
               {authMode === 'signin' && !savedBiometrics && biometricsAvailable && (
+                <div style={{ marginBottom: '18px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSignInWithBiometricLink}
+                    disabled={authLoading || biometricLoading}
+                    style={{
+                      width: '100%',
+                      padding: '12px 18px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(197, 168, 128, 0.16) 0%, rgba(197, 168, 128, 0.05) 100%)',
+                      border: '1px solid rgba(197, 168, 128, 0.4)',
+                      color: '#C5A880',
+                      fontWeight: 700,
+                      fontSize: '0.86rem',
+                      letterSpacing: '0.03em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '9px',
+                      cursor: (authLoading || biometricLoading) ? 'wait' : 'pointer',
+                      boxShadow: '0 8px 24px rgba(197, 168, 128, 0.1)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Fingerprint size={18} color="#C5A880" />
+                    <span>Pair Face ID / Sensor with Account</span>
+                  </button>
+                  <p style={{ fontSize: '0.73rem', color: '#71717A', marginTop: '6px', textAlign: 'center' }}>
+                    Fill in your email & password below, then tap here to sign in and pair this device.
+                  </p>
+                </div>
+              )}
+
+              {authMode === 'signin' && !biometricsAvailable && biometricsReason && (
                 <div style={{
                   padding: '10px 14px',
                   borderRadius: '10px',
-                  background: 'rgba(197, 168, 128, 0.06)',
-                  border: '1px dashed rgba(197, 168, 128, 0.25)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
                   marginBottom: '16px'
                 }}>
-                  <Fingerprint size={16} color="#C5A880" style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.76rem', color: '#D4D4D8', lineHeight: 1.4, textAlign: 'left' }}>
-                    Face ID & Fingerprint ready on this device. Sign in once with password to link.
+                  <Fingerprint size={16} color="#71717A" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.74rem', color: '#71717A', lineHeight: 1.4, textAlign: 'left' }}>
+                    {biometricsReason}
                   </span>
                 </div>
               )}
@@ -1349,6 +1440,72 @@ export default function AdminPage({ setCurrentView }) {
             onConfirm={() => { resetToDefaults(); setResetConfirm(false); }}
             onCancel={() => setResetConfirm(false)}
           />
+        )}
+        {showBioPrompt && !savedBiometrics && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(16px)', padding: '20px'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              style={{
+                background: 'rgba(18, 18, 22, 0.98)',
+                border: '1px solid rgba(197, 168, 128, 0.35)',
+                borderRadius: '20px',
+                padding: '32px 26px',
+                maxWidth: '420px',
+                width: '100%',
+                textAlign: 'center',
+                boxShadow: '0 30px 80px rgba(0,0,0,0.9)'
+              }}
+            >
+              <div style={{
+                width: '52px', height: '52px', borderRadius: '50%',
+                background: 'rgba(197, 168, 128, 0.15)',
+                border: '1px solid rgba(197, 168, 128, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px', color: '#C5A880'
+              }}>
+                <Fingerprint size={24} />
+              </div>
+              <h3 className="font-display" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '8px' }}>
+                Enable Face ID / Quick Unlock?
+              </h3>
+              <p style={{ color: '#A1A1AA', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: '22px' }}>
+                Pair this device to bypass entering your password and unlock your STYCH Owner Portal instantly with one tap.
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBioPrompt(false)}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                    color: '#A1A1AA', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer'
+                  }}
+                >
+                  Maybe Later
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegisterBiometrics}
+                  disabled={biometricLoading}
+                  className="btn-primary"
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px',
+                    fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  <Fingerprint size={16} />
+                  <span>{biometricLoading ? 'Pairing...' : 'Enable Now'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -3,6 +3,23 @@
  * Supports Apple Face ID / Touch ID, Android Fingerprint, and Windows Hello.
  */
 
+// Robust Base64 & Base64URL to ArrayBuffer conversion
+function base64ToBuffer(base64String) {
+  if (!base64String) return new ArrayBuffer(0);
+  // Replace base64url characters with standard base64
+  let base64 = base64String.replace(/-/g, '+').replace(/_/g, '/');
+  // Pad with '=' if length is not a multiple of 4
+  while (base64.length % 4 !== 0) {
+    base64 += '=';
+  }
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 function bufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -12,39 +29,46 @@ function bufferToBase64(buffer) {
   return window.btoa(binary);
 }
 
-function base64ToBuffer(base64) {
-  const binary = window.atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
 /**
  * Check if the current device & browser support platform biometrics (Face ID / Fingerprint).
  */
 export async function isBiometricsSupported() {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') {
+    return { supported: false, reason: 'No browser window.' };
+  }
 
-  // WebAuthn requires a secure context (HTTPS or localhost)
-  if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-    return false;
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isSecure = window.isSecureContext || isLocal;
+
+  if (!isSecure) {
+    return {
+      supported: false,
+      reason: 'Biometrics require HTTPS. On mobile, please access via HTTPS or your deployed domain (e.g. Vercel).'
+    };
   }
 
   if (
-    window.PublicKeyCredential &&
-    typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function'
+    !window.PublicKeyCredential ||
+    typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function'
   ) {
-    try {
-      const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      return Boolean(isAvailable);
-    } catch {
-      return false;
-    }
+    return {
+      supported: false,
+      reason: 'WebAuthn is not supported in this browser.'
+    };
   }
 
-  return false;
+  try {
+    const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    return {
+      supported: Boolean(isAvailable),
+      reason: isAvailable ? '' : 'No biometric sensor detected on this device.'
+    };
+  } catch (e) {
+    return {
+      supported: false,
+      reason: e.message || 'Biometric capability detection failed.'
+    };
+  }
 }
 
 /**
@@ -65,7 +89,12 @@ export function getSavedBiometricInfo() {
  */
 export async function registerBiometrics(userEmail = 'admin@stych.store') {
   if (!window.PublicKeyCredential) {
-    throw new Error('Biometric authentication is not supported on this browser.');
+    throw new Error('Biometrics are not supported on this browser.');
+  }
+
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!window.isSecureContext && !isLocal) {
+    throw new Error('Biometric setup requires HTTPS. Please test via HTTPS or your live URL.');
   }
 
   const challenge = new Uint8Array(32);
@@ -74,10 +103,10 @@ export async function registerBiometrics(userEmail = 'admin@stych.store') {
   const userId = new Uint8Array(16);
   window.crypto.getRandomValues(userId);
 
-  // Exclude port from rp.id if custom domain or localhost
   const hostname = window.location.hostname;
   const rpConfig = { name: 'STYCH Luxury Atelier' };
-  if (hostname && hostname !== 'localhost' && !hostname.match(/^[0-9.]+$/)) {
+  // Only assign rp.id if not an IP address (IP addresses cause WebAuthn SecurityError)
+  if (hostname && !hostname.match(/^[0-9.]+$/)) {
     rpConfig.id = hostname;
   }
 
@@ -94,7 +123,7 @@ export async function registerBiometrics(userEmail = 'admin@stych.store') {
       { alg: -257, type: 'public-key' }  // RS256
     ],
     authenticatorSelection: {
-      authenticatorAttachment: 'platform', // Hardware device sensor: Face ID, Touch ID, Fingerprint
+      authenticatorAttachment: 'platform', // Built-in hardware sensor
       userVerification: 'required',
       residentKey: 'preferred'
     },
@@ -110,17 +139,21 @@ export async function registerBiometrics(userEmail = 'admin@stych.store') {
     throw new Error('Biometric authorization was cancelled or failed.');
   }
 
-  const rawId = credential.rawId ? bufferToBase64(credential.rawId) : credential.id;
+  let rawId;
+  if (credential.rawId) {
+    rawId = bufferToBase64(credential.rawId);
+  } else {
+    rawId = credential.id;
+  }
+
+  const isApple = navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') || navigator.userAgent.includes('Macintosh');
+  const isAndroid = navigator.userAgent.includes('Android');
 
   const biometricRecord = {
     id: rawId,
     email: userEmail,
     registeredAt: new Date().toISOString(),
-    platform: navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')
-      ? 'Apple Face ID / Touch ID'
-      : navigator.userAgent.includes('Android')
-      ? 'Android Biometrics'
-      : 'Device Biometrics'
+    platform: isApple ? 'Apple Face ID / Touch ID' : isAndroid ? 'Android Biometrics' : 'Device Biometrics'
   };
 
   localStorage.setItem('stych_biometric_device', JSON.stringify(biometricRecord));
@@ -133,13 +166,15 @@ export async function registerBiometrics(userEmail = 'admin@stych.store') {
 export async function verifyBiometrics() {
   const saved = getSavedBiometricInfo();
   if (!saved || !saved.id) {
-    throw new Error('No registered biometric device found. Please log in with password once to enable biometrics.');
+    throw new Error('No registered biometric device found. Please sign in with password first to enable biometrics.');
   }
 
   const challenge = new Uint8Array(32);
   window.crypto.getRandomValues(challenge);
 
   const hostname = window.location.hostname;
+  
+  // Note: transports is intentionally omitted so both platform and hybrid (iCloud Keychain) passkeys match
   const getOptions = {
     challenge,
     timeout: 60000,
@@ -147,13 +182,12 @@ export async function verifyBiometrics() {
     allowCredentials: [
       {
         id: base64ToBuffer(saved.id),
-        type: 'public-key',
-        transports: ['internal']
+        type: 'public-key'
       }
     ]
   };
 
-  if (hostname && hostname !== 'localhost' && !hostname.match(/^[0-9.]+$/)) {
+  if (hostname && !hostname.match(/^[0-9.]+$/)) {
     getOptions.rpId = hostname;
   }
 
@@ -180,4 +214,3 @@ export function removeBiometrics() {
     localStorage.removeItem('stych_biometric_device');
   }
 }
-
