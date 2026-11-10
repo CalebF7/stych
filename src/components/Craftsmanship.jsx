@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -20,6 +20,29 @@ const cardVariants = {
 
 export default function Craftsmanship() {
   const [activeFeature, setActiveFeature] = useState(0);
+  const gridRef = useRef(null);
+
+  const handleScroll = () => {
+    const el = gridRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const totalScroll = el.scrollWidth - el.clientWidth;
+    if (totalScroll <= 0) return;
+    const scrollFraction = el.scrollLeft / totalScroll;
+    const index = Math.min(3, Math.max(0, Math.round(scrollFraction * 3)));
+    if (index !== activeFeature) {
+      setActiveFeature(index);
+    }
+  };
+
+  const scrollToFeature = (idx) => {
+    setActiveFeature(idx);
+    const el = gridRef.current;
+    if (!el) return;
+    const card = el.children[idx];
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  };
 
   const pillars = [
     {
@@ -126,8 +149,10 @@ export default function Craftsmanship() {
           </p>
         </motion.div>
 
-        {/* 4 Feature Cards Grid — Clean 4-Column Desktop, 2-Col Tablet, 1-Col Mobile */}
+        {/* 4 Feature Cards Grid — Clean 4-Column Desktop, 2-Col Tablet, Horizontal Snap on Mobile */}
         <motion.div
+          ref={gridRef}
+          onScroll={handleScroll}
           className="craftsmanship-grid"
           variants={containerVariants}
           initial="hidden"
@@ -143,7 +168,7 @@ export default function Craftsmanship() {
                 className="craftsmanship-card"
                 variants={cardVariants}
                 whileHover={{ y: -4 }}
-                onClick={() => setActiveFeature(idx)}
+                onClick={() => scrollToFeature(idx)}
                 style={{
                   background: isSelected ? 'rgba(26, 26, 32, 0.85)' : 'rgba(18, 18, 22, 0.6)',
                   backdropFilter: 'blur(16px)',
@@ -240,6 +265,28 @@ export default function Craftsmanship() {
             );
           })}
         </motion.div>
+
+        {/* Mobile Swipe Indicators */}
+        <div className="craftsmanship-mobile-dots">
+          {pillars.map((_, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => scrollToFeature(idx)}
+              style={{
+                width: activeFeature === idx ? '22px' : '6px',
+                height: '6px',
+                borderRadius: '9999px',
+                background: activeFeature === idx ? '#C5A880' : 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              aria-label={`Go to Garment Engineering slide ${idx + 1}`}
+            />
+          ))}
+        </div>
       </div>
 
       <style>{`
@@ -248,6 +295,10 @@ export default function Craftsmanship() {
           grid-template-columns: repeat(4, 1fr);
           gap: 18px;
           width: 100%;
+        }
+
+        .craftsmanship-mobile-dots {
+          display: none;
         }
 
         @media (min-width: 1025px) {
@@ -259,7 +310,7 @@ export default function Craftsmanship() {
           }
         }
 
-        @media (max-width: 1024px) and (min-width: 641px) {
+        @media (max-width: 1024px) and (min-width: 769px) {
           .craftsmanship-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
@@ -272,7 +323,7 @@ export default function Craftsmanship() {
           }
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           .craftsmanship-section {
             padding: 56px 0 !important;
           }
@@ -280,11 +331,23 @@ export default function Craftsmanship() {
             font-size: clamp(1.4rem, 5.5vw, 1.85rem) !important;
           }
           .craftsmanship-grid {
-            grid-template-columns: 1fr !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
             gap: 14px !important;
+            padding: 8px 16px 20px !important;
+            margin: 0 -16px !important;
+            scrollbar-width: none !important;
+          }
+          .craftsmanship-grid::-webkit-scrollbar {
+            display: none !important;
           }
           .craftsmanship-card {
-            width: 100% !important;
+            min-width: 82vw !important;
+            max-width: 320px !important;
+            flex-shrink: 0 !important;
+            scroll-snap-align: center !important;
             padding: 24px 20px !important;
           }
           .craftsmanship-card-title {
@@ -294,6 +357,13 @@ export default function Craftsmanship() {
           .craftsmanship-card-desc {
             min-height: auto;
             font-size: 0.82rem !important;
+          }
+          .craftsmanship-mobile-dots {
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
           }
         }
       `}</style>
