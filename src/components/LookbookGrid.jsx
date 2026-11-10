@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Camera } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 export default function LookbookGrid({ onShopClick }) {
   const editorialShots = [

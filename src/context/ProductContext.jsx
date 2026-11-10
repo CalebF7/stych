@@ -11,7 +11,7 @@ const CONFIG_STORAGE_KEY = 'stych_store_config_v3';
 // Helper to clear obsolete store config keys from previous versions
 try {
   localStorage.removeItem('stych_store_config_v2');
-} catch (e) {}
+} catch (_err) {}
 
 // ─── Helper: map Supabase row → app product shape ───────────────────────────
 function rowToProduct(row) {
@@ -100,11 +100,11 @@ export function ProductProvider({ children }) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) { }
+    } catch (_err) { }
     return INITIAL_PRODUCTS;
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [dbReady, setDbReady] = useState(false);
 
   // Store config: initialise from localStorage cache immediately, then hydrate from Supabase
@@ -122,13 +122,13 @@ export function ProductProvider({ children }) {
           }
         };
       }
-    } catch (e) { }
+    } catch (_err) { }
     return STORE_CONFIG;
   });
 
   // Persist cache locally whenever config changes
   useEffect(() => {
-    try { localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(storeConfig)); } catch (e) { }
+    try { localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(storeConfig)); } catch (_err) { }
   }, [storeConfig]);
 
   // Fetch live store settings from Supabase on mount
@@ -172,7 +172,7 @@ export function ProductProvider({ children }) {
     }
     try {
       localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(products));
-    } catch (e) { }
+    } catch (_err) { }
   }, [products]);
 
   // ── Seed the database with INITIAL_PRODUCTS on first run ─────────────────
@@ -213,7 +213,7 @@ export function ProductProvider({ children }) {
           const mapped = data.map(rowToProduct);
           setProducts(mapped);
           // Cache the real products so next visit is instant
-          try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(mapped)); } catch (e) { }
+          try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(mapped)); } catch (_err) { }
         }
       }
     } catch (err) {
@@ -223,7 +223,10 @@ export function ProductProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    fetchProducts();
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchProducts]);
 
   // ── CRUD: Add product ─────────────────────────────────────────────────────
@@ -253,7 +256,7 @@ export function ProductProvider({ children }) {
         const newProduct = rowToProduct(data);
         setProducts(prev => {
           const next = [newProduct, ...prev];
-          try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (e) {}
+          try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (_err) {}
           return next;
         });
         return newProduct;
@@ -265,7 +268,7 @@ export function ProductProvider({ children }) {
     const fallback = { id: `stych-${Date.now()}`, ...row, stockQuantity: stockQty, inStock: row.in_stock, isNew: row.is_new, isFeatured: row.is_featured };
     setProducts(prev => {
       const next = [fallback, ...prev];
-      try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (e) {}
+      try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (_err) {}
       return next;
     });
     return fallback;
@@ -284,7 +287,7 @@ export function ProductProvider({ children }) {
         }
         return item;
       });
-      try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (e) {}
+      try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (_err) {}
       return next;
     });
 
@@ -319,7 +322,7 @@ export function ProductProvider({ children }) {
   const deleteProduct = async (id) => {
     setProducts(prev => {
       const next = prev.filter(item => item.id !== id);
-      try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (e) {}
+      try { localStorage.setItem(PRODUCT_CACHE_KEY, JSON.stringify(next)); } catch (_err) {}
       return next;
     });
     if (dbReady) {
@@ -405,6 +408,7 @@ export function ProductProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react/only-export-components, react-refresh/only-export-components
 export function useProducts() {
   const context = useContext(ProductContext);
   if (!context) {

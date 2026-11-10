@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ShoppingBag, Trash2, ArrowRight, MessageCircle, Truck,
-  ShieldCheck, Sparkles, Plus, Minus, ArrowLeft, Check,
-  Copy, CheckCircle2, ExternalLink, PackageCheck, AlertCircle
+  Plus, Minus, ArrowLeft, Check,
+  Copy, ExternalLink, PackageCheck, AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -135,7 +135,7 @@ export default function CartPage({ setCurrentView }) {
         spread: 75,
         origin: { y: 0.7 }
       });
-    } catch (err) { }
+    } catch (_err) { }
 
     // Save placed order details in state
     const currentItems = [...cartItems];

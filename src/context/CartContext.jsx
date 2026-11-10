@@ -73,7 +73,7 @@ export function CartProvider({ children }) {
         origin: { y: 0.85, x: 0.9 },
         colors: ['#FFFFFF', '#C5A880', '#111111']
       });
-    } catch (e) {
+    } catch (_err) {
       // safe fallback
     }
 
@@ -123,6 +123,7 @@ export function CartProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react/only-export-components, react-refresh/only-export-components
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {

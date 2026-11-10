@@ -53,7 +53,11 @@ export default function HeroArchedCarousel({ onSelectProduct }) {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 40) {
-      diff > 0 ? handleNext() : handlePrev();
+      if (diff > 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
     }
     touchStartX.current = null;
     setTimeout(() => setIsPaused(false), 2000);

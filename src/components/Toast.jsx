@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Check, X } from 'lucide-react';
+import { ShoppingBag, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export default function Toast() {

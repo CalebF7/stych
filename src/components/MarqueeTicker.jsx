@@ -1,5 +1,4 @@
 import React from 'react';
-import { Sparkles, ArrowUpRight } from 'lucide-react';
 
 export default function MarqueeTicker() {
   const tickerItems = [

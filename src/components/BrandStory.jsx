@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, Award, Compass, Shield } from 'lucide-react';
+import { ArrowRight, Award } from 'lucide-react';
 
 const sectionVariants = {
   hidden: {},

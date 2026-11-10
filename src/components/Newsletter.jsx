@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Sparkles, Mail } from 'lucide-react';
+import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import confetti from 'canvas-confetti';
 
@@ -29,8 +29,8 @@ export default function Newsletter() {
       setSubscribed(true);
       try {
         confetti({ particleCount: 30, spread: 60, origin: { y: 0.8 } });
-      } catch (err) {}
-    } catch (err) {
+      } catch (_err) { }
+    } catch (_err) {
       setSubError('Something went wrong. Please try again.');
     } finally {
       setSubscribing(false);

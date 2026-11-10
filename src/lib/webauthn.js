@@ -79,7 +79,7 @@ export function getSavedBiometricInfo() {
   try {
     const raw = localStorage.getItem('stych_biometric_device');
     return raw ? JSON.parse(raw) : null;
-  } catch {
+  } catch (_err) {
     return null;
   }
 }

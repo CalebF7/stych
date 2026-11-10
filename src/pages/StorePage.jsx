@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, ArrowUpDown, X, Sparkles, Filter } from 'lucide-react';
+import { Search, ArrowUpDown, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { useProducts } from '../context/ProductContext';
 import { CATEGORIES } from '../data/initialProducts';
@@ -53,11 +53,10 @@ export default function StorePage({ onQuickView }) {
 
   const handleCategorySelect = (cat) => {
     setSelectedCategory(cat);
-    if (cat === 'All Tees') {
-      window.location.hash = '#/store';
-    } else {
-      window.location.hash = `#/store?category=${encodeURIComponent(cat)}`;
-    }
+    const newHash = cat === 'All Tees' ? '#/store' : `#/store?category=${encodeURIComponent(cat)}`;
+    setTimeout(() => {
+      window.location.hash = newHash;
+    }, 0);
   };
 
   // Filter & Sort Products

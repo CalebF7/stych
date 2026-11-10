@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Lock, Unlock, Plus, Trash2, Edit3, Check, X, Shield, Star,
-  RefreshCw, Phone, Sparkles, Image, Tag, ArrowLeft, Save,
-  AlertCircle, Mail, MessageSquare, ExternalLink, Loader, User,
-  KeyRound, CheckCircle2, PackageCheck, Copy, Clock, Filter,
-  Eye, ChevronDown, ChevronUp, Search, Calendar, MapPin,
-  Fingerprint, ScanFace, Smartphone
+  RefreshCw, Phone, Sparkles, Image, Save,
+  AlertCircle, Mail, User, KeyRound, CheckCircle2, PackageCheck,
+  Copy, ChevronDown, ChevronUp, Search, Fingerprint
 } from 'lucide-react';
 import { useProducts } from '../context/ProductContext';
 import { formatCurrency } from '../data/config';
@@ -111,6 +109,82 @@ function ConfirmModal({ message, subtext, confirmLabel, confirmColor, onConfirm,
   );
 }
 
+// ─── Upload Slot Sub-component (must be top-level, not inside render) ────────
+function UploadSlot({ slot, label, url, isUploading, onChange, onFileUpload }) {
+  return (
+    <div style={{ flex: 1, minWidth: '220px' }}>
+      <p style={{ ...labelStyle, marginBottom: '8px' }}>{label}</p>
+      <div
+        style={{
+          position: 'relative',
+          border: `2px dashed ${isUploading ? 'rgba(197, 168, 128, 0.6)' : url ? 'rgba(16, 185, 129, 0.45)' : 'rgba(197, 168, 128, 0.35)'}`,
+          borderRadius: '14px', padding: '16px', textAlign: 'center',
+          background: isUploading ? 'rgba(197, 168, 128, 0.06)' : url ? 'rgba(16, 185, 129, 0.05)' : 'rgba(197, 168, 128, 0.04)',
+          cursor: isUploading ? 'not-allowed' : 'pointer', minHeight: '140px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.2s'
+        }}
+        onClick={() => !isUploading && document.getElementById(`upload-${slot}`).click()}
+      >
+        <input
+          id={`upload-${slot}`}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
+          style={{ display: 'none' }}
+          onChange={(e) => onFileUpload(slot, e)}
+        />
+
+        {isUploading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              border: '3px solid rgba(197, 168, 128, 0.2)',
+              borderTopColor: '#C5A880',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{ fontSize: '0.75rem', color: '#C5A880', fontWeight: 600 }}>Uploading to Cloud...</p>
+          </div>
+        ) : url ? (
+          <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(slot, ''); }}
+              title="Remove image"
+              style={{
+                position: 'absolute', top: '-8px', right: '-8px',
+                width: '26px', height: '26px', borderRadius: '50%',
+                background: '#EF4444', color: '#FFFFFF', border: '2px solid #121216',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', zIndex: 10
+              }}
+            >
+              <X size={14} />
+            </button>
+            <img
+              src={url}
+              alt="Preview"
+              style={{ width: '84px', height: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px', boxShadow: '0 6px 14px rgba(0,0,0,0.4)' }}
+            />
+            <p style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 600 }}>Uploaded ✓ • Tap to change</p>
+          </div>
+        ) : (
+          <div>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '50%',
+              background: 'rgba(197, 168, 128, 0.12)', border: '1px solid rgba(197, 168, 128, 0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px'
+            }}>
+              <Image size={20} color="#C5A880" />
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#FFFFFF', fontWeight: 700, marginBottom: '2px' }}>Upload Picture</p>
+            <p style={{ fontSize: '0.68rem', color: '#71717A' }}>JPEG, PNG or WebP • Max 5MB</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Dual Image Upload Component — Supabase Storage ─────────
 function DualImageUpload({ primaryUrl, secondaryUrl, onChange }) {
   const [uploading, setUploading] = useState({ primary: false, secondary: false });
@@ -130,9 +204,10 @@ function DualImageUpload({ primaryUrl, secondaryUrl, onChange }) {
     setUploading(prev => ({ ...prev, [slot]: true }));
 
     try {
-      // Unique filename to avoid collisions
       const ext = file.name.split('.').pop().toLowerCase();
-      const filename = `${slot}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const ts = Date.now();
+      const rand = Math.random().toString(36).slice(2);
+      const filename = `${slot}-${ts}-${rand}.${ext}`;
 
       const { error: uploadErr } = await supabase.storage
         .from('product-images')
@@ -140,7 +215,6 @@ function DualImageUpload({ primaryUrl, secondaryUrl, onChange }) {
 
       if (uploadErr) throw uploadErr;
 
-      // Get the permanent CDN public URL
       const { data: urlData } = supabase.storage
         .from('product-images')
         .getPublicUrl(filename);
@@ -154,82 +228,6 @@ function DualImageUpload({ primaryUrl, secondaryUrl, onChange }) {
     }
   };
 
-  const UploadSlot = ({ slot, label, url }) => {
-    const isUploading = uploading[slot];
-    return (
-      <div style={{ flex: 1, minWidth: '220px' }}>
-        <p style={{ ...labelStyle, marginBottom: '8px' }}>{label}</p>
-        <div
-          style={{
-            position: 'relative',
-            border: `2px dashed ${isUploading ? 'rgba(197, 168, 128, 0.6)' : url ? 'rgba(16, 185, 129, 0.45)' : 'rgba(197, 168, 128, 0.35)'}`,
-            borderRadius: '14px', padding: '16px', textAlign: 'center',
-            background: isUploading ? 'rgba(197, 168, 128, 0.06)' : url ? 'rgba(16, 185, 129, 0.05)' : 'rgba(197, 168, 128, 0.04)',
-            cursor: isUploading ? 'not-allowed' : 'pointer', minHeight: '140px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.2s'
-          }}
-          onClick={() => !isUploading && document.getElementById(`upload-${slot}`).click()}
-        >
-          <input
-            id={`upload-${slot}`}
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            style={{ display: 'none' }}
-            onChange={(e) => handleFileUpload(slot, e)}
-          />
-
-          {isUploading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                border: '3px solid rgba(197, 168, 128, 0.2)',
-                borderTopColor: '#C5A880',
-                animation: 'spin 1s linear infinite'
-              }} />
-              <p style={{ fontSize: '0.75rem', color: '#C5A880', fontWeight: 600 }}>Uploading to Cloud...</p>
-            </div>
-          ) : url ? (
-            <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onChange(slot, ''); }}
-                title="Remove image"
-                style={{
-                  position: 'absolute', top: '-8px', right: '-8px',
-                  width: '26px', height: '26px', borderRadius: '50%',
-                  background: '#EF4444', color: '#FFFFFF', border: '2px solid #121216',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', zIndex: 10
-                }}
-              >
-                <X size={14} />
-              </button>
-              <img
-                src={url}
-                alt="Preview"
-                style={{ width: '84px', height: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px', boxShadow: '0 6px 14px rgba(0,0,0,0.4)' }}
-              />
-              <p style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 600 }}>Uploaded ✓ • Tap to change</p>
-            </div>
-          ) : (
-            <div>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '50%',
-                background: 'rgba(197, 168, 128, 0.12)', border: '1px solid rgba(197, 168, 128, 0.25)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px'
-              }}>
-                <Image size={20} color="#C5A880" />
-              </div>
-              <p style={{ fontSize: '0.8rem', color: '#FFFFFF', fontWeight: 700, marginBottom: '2px' }}>Upload Picture</p>
-              <p style={{ fontSize: '0.68rem', color: '#71717A' }}>JPEG, PNG or WebP • Max 5MB</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {uploadError && (
@@ -238,8 +236,8 @@ function DualImageUpload({ primaryUrl, secondaryUrl, onChange }) {
         </p>
       )}
       <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
-        <UploadSlot slot="primary" label="Photo 1 — Main Drop (Required) *" url={primaryUrl} />
-        <UploadSlot slot="secondary" label="Photo 2 — Alternate Angle (Optional)" url={secondaryUrl} />
+        <UploadSlot slot="primary" label="Photo 1 — Main Drop (Required) *" url={primaryUrl} isUploading={uploading.primary} onChange={onChange} onFileUpload={handleFileUpload} />
+        <UploadSlot slot="secondary" label="Photo 2 — Alternate Angle (Optional)" url={secondaryUrl} isUploading={uploading.secondary} onChange={onChange} onFileUpload={handleFileUpload} />
       </div>
     </div>
   );
@@ -449,13 +447,15 @@ function EditPanel({ product, onSave, onCancel, updateProduct }) {
 }
 
 // ─── Main Admin Page ─────────────────────────────────────────
-export default function AdminPage({ setCurrentView }) {
+export default function AdminPage({ setCurrentView: _setCurrentView }) {
   const { products, storeConfig, addProduct, updateProduct, deleteProduct, toggleInStock, toggleFeatured, resetToDefaults, updateConfig } = useProducts();
 
   // Supabase Auth State
   const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => typeof window !== 'undefined' && sessionStorage.getItem('stych_admin_tab_authenticated') === 'true'
+  );
+  const [authChecking] = useState(false);
 
   // Auth Form State
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'register' | 'check_email'
@@ -555,6 +555,12 @@ export default function AdminPage({ setCurrentView }) {
   const [subscriberSearch, setSubscriberSearch] = useState('');
   const [copiedSubscribers, setCopiedSubscribers] = useState(false);
 
+  // Confirm modals state — declared before effects so setLockConfirm is available
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [lockConfirm, setLockConfirm] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
+
   const fetchSubscribers = async () => {
     setSubscribersLoading(true);
     try {
@@ -578,15 +584,9 @@ export default function AdminPage({ setCurrentView }) {
     setTimeout(() => setCopiedSubscribers(false), 2200);
   };
 
-  // Option A: Tab-isolated session management
-  // Active tab refresh keeps you signed in; new or duplicated tabs require signing in.
+  // Tab-isolated session management: state is initialized lazily above from sessionStorage.
+  // This effect only listens for real-time Supabase auth events.
   useEffect(() => {
-    const isTabAuth = sessionStorage.getItem('stych_admin_tab_authenticated') === 'true';
-    if (isTabAuth) {
-      setIsAuthenticated(true);
-    }
-    setAuthChecking(false);
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         sessionStorage.setItem('stych_admin_tab_authenticated', 'true');
@@ -623,9 +623,12 @@ export default function AdminPage({ setCurrentView }) {
   // Fetch initial collections when authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      fetchOrders();
-      fetchInquiries();
-      fetchSubscribers();
+      const timer = setTimeout(() => {
+        fetchOrders();
+        fetchInquiries();
+        fetchSubscribers();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated]);
 
@@ -642,12 +645,6 @@ export default function AdminPage({ setCurrentView }) {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isAuthenticated]);
-
-  // Confirm modals state
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [orderToDelete, setOrderToDelete] = useState(null);
-  const [lockConfirm, setLockConfirm] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState(false);
 
   // Edit panel state
   const [editingProduct, setEditingProduct] = useState(null);
@@ -690,7 +687,7 @@ export default function AdminPage({ setCurrentView }) {
     if (!inq.email) return;
     try {
       navigator.clipboard.writeText(inq.email);
-    } catch (e) { }
+    } catch (_err) { }
     setReplyCopiedId(inq.id);
     setTimeout(() => setReplyCopiedId(null), 4000);
 
@@ -702,7 +699,7 @@ export default function AdminPage({ setCurrentView }) {
     if (!email) return;
     try {
       navigator.clipboard.writeText(email);
-    } catch (e) { }
+    } catch (_err) { }
     setReplyCopiedId(id);
     setTimeout(() => setReplyCopiedId(null), 3000);
   };
@@ -1165,40 +1162,41 @@ export default function AdminPage({ setCurrentView }) {
             /* ── Sign In / Register Form ── */
             <>
               {authMode === 'signin' && savedBiometrics && (
-                <div style={{ marginBottom: '18px' }}>
+                <div style={{ marginBottom: '16px' }}>
                   <button
                     type="button"
                     onClick={handleBiometricLogin}
                     disabled={biometricLoading}
                     style={{
                       width: '100%',
-                      padding: '13px 18px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, rgba(197, 168, 128, 0.22) 0%, rgba(197, 168, 128, 0.08) 100%)',
-                      border: '1px solid rgba(197, 168, 128, 0.45)',
-                      color: '#C5A880',
-                      fontWeight: 700,
-                      fontSize: '0.88rem',
-                      letterSpacing: '0.03em',
+                      padding: '11px 16px',
+                      borderRadius: '10px',
+                      background: 'transparent',
+                      border: '1px solid rgba(197, 168, 128, 0.35)',
+                      color: '#D4D4D8',
+                      fontWeight: 500,
+                      fontSize: '0.84rem',
+                      letterSpacing: '0.02em',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '10px',
+                      gap: '9px',
                       cursor: biometricLoading ? 'wait' : 'pointer',
-                      boxShadow: '0 8px 24px rgba(197, 168, 128, 0.12)',
-                      transition: 'all 0.2s ease'
+                      transition: 'border-color 0.18s'
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(197, 168, 128, 0.6)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(197, 168, 128, 0.35)'; }}
                   >
                     {biometricLoading ? (
                       <div style={{
-                        width: '16px', height: '16px', borderRadius: '50%',
-                        border: '2px solid rgba(197,168,128,0.3)', borderTopColor: '#C5A880',
+                        width: '14px', height: '14px', borderRadius: '50%',
+                        border: '2px solid rgba(197, 168, 128, 0.25)', borderTopColor: '#C5A880',
                         animation: 'spin 0.85s linear infinite'
                       }} />
                     ) : (
-                      <Fingerprint size={19} color="#C5A880" />
+                      <Fingerprint size={15} color="#C5A880" />
                     )}
-                    <span>{biometricLoading ? 'Verifying Sensor...' : `Unlock with ${savedBiometrics.platform || 'Face ID / Fingerprint'}`}</span>
+                    <span>{biometricLoading ? 'Verifying...' : `Unlock with ${savedBiometrics.platform || 'Face ID'}`}</span>
                   </button>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px', marginBottom: '8px' }}>
@@ -1212,36 +1210,34 @@ export default function AdminPage({ setCurrentView }) {
               )}
 
               {authMode === 'signin' && !savedBiometrics && biometricsAvailable && (
-                <div style={{ marginBottom: '18px' }}>
+                <div style={{ marginBottom: '16px' }}>
                   <button
                     type="button"
                     onClick={handleSignInWithBiometricLink}
                     disabled={authLoading || biometricLoading}
                     style={{
                       width: '100%',
-                      padding: '12px 18px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, rgba(197, 168, 128, 0.16) 0%, rgba(197, 168, 128, 0.05) 100%)',
-                      border: '1px solid rgba(197, 168, 128, 0.4)',
-                      color: '#C5A880',
-                      fontWeight: 700,
-                      fontSize: '0.86rem',
-                      letterSpacing: '0.03em',
+                      padding: '11px 16px',
+                      borderRadius: '10px',
+                      background: 'transparent',
+                      border: '1px solid rgba(197, 168, 128, 0.35)',
+                      color: '#D4D4D8',
+                      fontWeight: 500,
+                      fontSize: '0.82rem',
+                      letterSpacing: '0.02em',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '9px',
                       cursor: (authLoading || biometricLoading) ? 'wait' : 'pointer',
-                      boxShadow: '0 8px 24px rgba(197, 168, 128, 0.1)',
-                      transition: 'all 0.2s ease'
+                      transition: 'border-color 0.18s'
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(197, 168, 128, 0.6)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(197, 168, 128, 0.35)'; }}
                   >
-                    <Fingerprint size={18} color="#C5A880" />
+                    <Fingerprint size={15} color="#C5A880" />
                     <span>Pair Face ID / Sensor with Account</span>
                   </button>
-                  <p style={{ fontSize: '0.73rem', color: '#71717A', marginTop: '6px', textAlign: 'center' }}>
-                    Fill in your email & password below, then tap here to sign in and pair this device.
-                  </p>
                 </div>
               )}
 
@@ -1264,130 +1260,130 @@ export default function AdminPage({ setCurrentView }) {
               )}
 
               <form onSubmit={handleAuthSubmit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
-              {authMode === 'register' && (
+                {authMode === 'register' && (
+                  <div>
+                    <label style={labelStyle}>Full Name *</label>
+                    <div style={{ position: 'relative' }}>
+                      <User size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="text" required placeholder="e.g. STYCH Atelier"
+                        autoComplete="off"
+                        value={authName} onChange={e => setAuthName(e.target.value)}
+                        style={{ ...inputStyle, paddingLeft: '40px' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <label style={labelStyle}>Full Name *</label>
+                  <label style={labelStyle}>Admin Email Address *</label>
                   <div style={{ position: 'relative' }}>
-                    <User size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                    <Mail size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                     <input
-                      type="text" required placeholder="e.g. STYCH Atelier"
+                      type="email" required placeholder="admin@stych.store"
                       autoComplete="off"
-                      value={authName} onChange={e => setAuthName(e.target.value)}
+                      value={authEmail} onChange={e => setAuthEmail(e.target.value)}
                       style={{ ...inputStyle, paddingLeft: '40px' }}
                     />
                   </div>
                 </div>
-              )}
 
-              <div>
-                <label style={labelStyle}>Admin Email Address *</label>
-                <div style={{ position: 'relative' }}>
-                  <Mail size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input
-                    type="email" required placeholder="admin@stych.store"
-                    autoComplete="off"
-                    value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-                    style={{ ...inputStyle, paddingLeft: '40px' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Password *</label>
-                <div style={{ position: 'relative' }}>
-                  <KeyRound size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input
-                    type="password" required placeholder="••••••••"
-                    autoComplete={authMode === 'register' ? 'new-password' : 'off'}
-                    value={authPassword} onChange={e => setAuthPassword(e.target.value)}
-                    style={{ ...inputStyle, paddingLeft: '40px' }}
-                  />
-                </div>
-              </div>
-
-              {authMode === 'register' && (
                 <div>
-                  <label style={labelStyle}>Confirm Password *</label>
+                  <label style={labelStyle}>Password *</label>
                   <div style={{ position: 'relative' }}>
                     <KeyRound size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                     <input
                       type="password" required placeholder="••••••••"
-                      autoComplete="new-password"
-                      value={authConfirmPassword} onChange={e => setAuthConfirmPassword(e.target.value)}
+                      autoComplete={authMode === 'register' ? 'new-password' : 'off'}
+                      value={authPassword} onChange={e => setAuthPassword(e.target.value)}
                       style={{ ...inputStyle, paddingLeft: '40px' }}
                     />
                   </div>
                 </div>
-              )}
 
-              {authError && (
-                <div style={{ padding: '10px 14px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px' }}>
-                  <p style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <AlertCircle size={14} />
-                    <span>{authError}</span>
-                  </p>
-                  {authError.toLowerCase().includes('not been confirmed') && (
-                    <button
-                      type="button"
-                      onClick={handleResendVerification}
-                      disabled={resendingEmail}
-                      style={{ marginTop: '8px', color: '#C5A880', fontSize: '0.78rem', fontWeight: 700, background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'block' }}
-                    >
-                      {resendingEmail ? 'Sending...' : 'Click here to resend activation link ➔'}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {authSuccessMessage && (
-                <p style={{ color: '#10B981', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                  <CheckCircle2 size={14} />
-                  <span>{authSuccessMessage}</span>
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="btn-primary"
-                style={{
-                  padding: '14px 20px',
-                  width: '100%',
-                  fontSize: '0.88rem',
-                  marginTop: '6px',
-                  opacity: authLoading ? 0.75 : 1,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {authLoading ? (
-                  <>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                      border: '2.5px solid rgba(0, 0, 0, 0.25)',
-                      borderTopColor: '#000000',
-                      animation: 'spin 0.85s linear infinite',
-                      flexShrink: 0
-                    }} />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ whiteSpace: 'nowrap' }}>
-                      {authMode === 'signin' ? 'Sign In to Portal' : 'Create Admin Account'}
-                    </span>
-                    <Unlock size={15} style={{ flexShrink: 0 }} />
-                  </>
+                {authMode === 'register' && (
+                  <div>
+                    <label style={labelStyle}>Confirm Password *</label>
+                    <div style={{ position: 'relative' }}>
+                      <KeyRound size={16} color="#71717A" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="password" required placeholder="••••••••"
+                        autoComplete="new-password"
+                        value={authConfirmPassword} onChange={e => setAuthConfirmPassword(e.target.value)}
+                        style={{ ...inputStyle, paddingLeft: '40px' }}
+                      />
+                    </div>
+                  </div>
                 )}
-              </button>
-            </form>
-          </>
+
+                {authError && (
+                  <div style={{ padding: '10px 14px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px' }}>
+                    <p style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertCircle size={14} />
+                      <span>{authError}</span>
+                    </p>
+                    {authError.toLowerCase().includes('not been confirmed') && (
+                      <button
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={resendingEmail}
+                        style={{ marginTop: '8px', color: '#C5A880', fontSize: '0.78rem', fontWeight: 700, background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'block' }}
+                      >
+                        {resendingEmail ? 'Sending...' : 'Click here to resend activation link ➔'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {authSuccessMessage && (
+                  <p style={{ color: '#10B981', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                    <CheckCircle2 size={14} />
+                    <span>{authSuccessMessage}</span>
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="btn-primary"
+                  style={{
+                    padding: '14px 20px',
+                    width: '100%',
+                    fontSize: '0.88rem',
+                    marginTop: '6px',
+                    opacity: authLoading ? 0.75 : 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {authLoading ? (
+                    <>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        border: '2.5px solid rgba(0, 0, 0, 0.25)',
+                        borderTopColor: '#000000',
+                        animation: 'spin 0.85s linear infinite',
+                        flexShrink: 0
+                      }} />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ whiteSpace: 'nowrap' }}>
+                        {authMode === 'signin' ? 'Sign In to Portal' : 'Create Admin Account'}
+                      </span>
+                      <Unlock size={15} style={{ flexShrink: 0 }} />
+                    </>
+                  )}
+                </button>
+              </form>
+            </>
           )}
         </div>
 
@@ -1411,7 +1407,6 @@ export default function AdminPage({ setCurrentView }) {
 
   // Counts & Calculations
   const inStockCount = products.filter(p => p.inStock).length;
-  const soldOutCount = products.filter(p => !p.inStock).length;
   const pendingOrdersCount = orders.filter(o => o.status === 'pending_payment').length;
 
   // Filtered Orders
@@ -2586,15 +2581,16 @@ export default function AdminPage({ setCurrentView }) {
                         style={{
                           padding: '9px 16px',
                           borderRadius: '10px',
-                          background: 'linear-gradient(135deg, rgba(197, 168, 128, 0.25) 0%, rgba(197, 168, 128, 0.1) 100%)',
+                          background: 'rgba(255, 255, 255, 0.04)',
                           border: '1px solid rgba(197, 168, 128, 0.4)',
                           color: '#C5A880',
                           fontSize: '0.8rem',
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: biometricLoading ? 'wait' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          gap: '6px',
+                          transition: 'all 0.15s ease'
                         }}
                       >
                         <Fingerprint size={16} />

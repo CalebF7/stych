@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, Globe, ArrowUpRight, ShieldCheck, Home } from 'lucide-react';
+import { MessageCircle, ArrowUpRight, Home } from 'lucide-react';
 import { STORE_CONFIG } from '../data/config';
 import { useProducts } from '../context/ProductContext';
 

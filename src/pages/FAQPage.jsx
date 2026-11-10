@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, MessageCircle, Mail, MapPin, Send, Check, Sparkles, HelpCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle, Send, Check, HelpCircle } from 'lucide-react';
 import { FAQS, FAQ_CATEGORIES } from '../data/faqs';
 import { STORE_CONFIG } from '../data/config';
 import { useProducts } from '../context/ProductContext';
@@ -10,7 +10,6 @@ import confetti from 'canvas-confetti';
 export default function FAQPage() {
   const { storeConfig } = useProducts();
   const whatsappNum = storeConfig?.conciergeWhatsappNumber || storeConfig?.whatsappNumber || STORE_CONFIG.conciergeWhatsappNumber || STORE_CONFIG.whatsappNumber;
-  const supportEmail = storeConfig?.supportEmail || STORE_CONFIG.supportEmail || 'concierge@stych.store';
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedIndex, setExpandedIndex] = useState(0);
@@ -47,13 +46,13 @@ export default function FAQPage() {
       if (error) throw error;
 
       setMessageSent(true);
-      try { confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } }); } catch (err) {}
+      try { confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } }); } catch (_err) {}
 
       setTimeout(() => {
         setContactForm({ name: '', email: '', subject: 'Order & Sizing Inquiry', message: '' });
         setMessageSent(false);
       }, 4000);
-    } catch (err) {
+    } catch (_err) {
       setSubmitError('Failed to send message. Please try again or reach us on WhatsApp.');
     } finally {
       setSubmitting(false);

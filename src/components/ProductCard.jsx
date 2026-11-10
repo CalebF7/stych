@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { formatCurrency } from '../data/config';
 import { useCart } from '../context/CartContext';
 
 export default function ProductCard({ product, onQuickView }) {
   const { addToCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
-  const [selectedSize, setSelectedSize] = useState('L');
 
   const availableSizes = product.sizes || ['S', 'M', 'L', 'XL', 'XXL'];
 
   const handleQuickAdd = (e, size) => {
     e.stopPropagation();
     if (!product.inStock) return;
-    setSelectedSize(size);
     addToCart(product, size, 1);
   };
 
@@ -184,7 +182,7 @@ export default function ProductCard({ product, onQuickView }) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onQuickView && onQuickView(product);
+              if (onQuickView) onQuickView(product);
             }}
             style={{
               width: '100%',

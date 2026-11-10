@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, ShieldCheck, Zap, Truck } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Zap, Truck } from 'lucide-react';
 import HeroArchedCarousel from './HeroArchedCarousel';
 
 export default function HeroSection({ onShopClick, onExploreClick, onSelectProduct }) {

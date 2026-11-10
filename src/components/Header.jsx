@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Lock, Menu, X, ArrowRight, MessageCircle } from 'lucide-react';
+import { ShoppingBag, Menu, X, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
-export default function Header({ currentView, setCurrentView, openAdminLogin }) {
+export default function Header({ currentView, setCurrentView }) {
   const { cartCount } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

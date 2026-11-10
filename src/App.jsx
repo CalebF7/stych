@@ -73,7 +73,7 @@ function AppContent() {
       window.location.hash = `#/${currentView}`;
     }
     if (currentView === 'admin') {
-      try { localStorage.setItem('stych_pwa_target', 'admin'); } catch (e) { }
+      try { localStorage.setItem('stych_pwa_target', 'admin'); } catch (_err) { }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
